@@ -1,0 +1,9 @@
+Package: kr.h4ck.ptracebypass
+Name: ptraceBypass
+Version: 0.0.1
+Architecture: iphoneos-arm64
+Description: An awesome tool of some sort!!
+Maintainer: h4ck.kr
+Author: h4ck.kr
+Section: System
+Tag: role::hacker
