@@ -1,4 +1,6 @@
 Dopamine越狱iOS15.8.1，IPhone6s；
+
+
 1，查看unma -a 获取xnu版本，
 
 2，下载源码xnu-8020.241.42，获取 proc 结构
