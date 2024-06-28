@@ -196,19 +196,7 @@ int main(int argc, char *argv[], char *envp[]) {
 		printf("[i] ptracetest proc: 0x%llx\n", ptracetest_proc);
 
 		// https://github.com/apple/darwin-xnu/blob/main/bsd/kern/mach_process.c#L133
-		// uint64_t ptracetest_lflag = ptracetest_proc + 0x268/*lflagoffset*/;
-		// unsigned int lflagvalue = kread32(ptracetest_lflag);
-		// printf("[i] ptracetest proc->p_lflag: 0x%x\n", lflagvalue);
-    
-
-		// 计算p_ppid的地址
-		uint64_t p_ppid_addr = ptracetest_proc + offsetof(struct proc, p_ppid);
-		// 读取p_ppid的值
-		uint32_t p_ppid_value = kread32(p_ppid_addr);
-
-		printf("[i] ptracetest proc->p_ppid: %d\n", p_ppid_value);
-
-
+	
 		uint64_t ptracetest_lflag = ptracetest_proc + 0x268/*lflagoffset*/;
 		unsigned int lflagvalue = kread32(ptracetest_lflag);
 		printf("[i] ptracetest ptracetest_lflag->addr:  0x%llx\n", ptracetest_lflag);
@@ -224,10 +212,7 @@ int main(int argc, char *argv[], char *envp[]) {
 		
 		}
 			
-	   
-
-		// dlclose(libjb);
-		// return 0;
+	
 
 		if(ISSET(lflagvalue, P_LNOATTACH))
         {
@@ -267,17 +252,19 @@ int main(int argc, char *argv[], char *envp[]) {
         	}
 		}
 
-		// uint64_t ptracetest_ppid = ptracetest_proc + 0x20;
-		// unsigned int ppidvalue = kread32(ptracetest_ppid);
-		// printf("[i] ptracetest proc->p_ppid: %d\n", ppidvalue);
-		// if(ppidvalue != 1) {
-		// 	printf("[+] Patching proc->p_ppid to 1...\n");
-		// 	kwrite32(ptracetest_ppid, 1);
+	    // 计算p_ppid的地址
+		uint64_t p_ppid_addr = ptracetest_proc + offsetof(struct proc, p_ppid);
+		// 读取p_ppid的值
+		uint32_t p_ppid_value = kread32(p_ppid_addr);
 
-		// 	ppidvalue = kread32(ptracetest_ppid);
-		// 	printf("[+] ptracetest proc->p_ppid: %d\n", ppidvalue);
-		// }
+		printf("[i] ptracetest proc->p_ppid: %d\n", p_ppid_value);
+		if(p_ppid_value != 1) {
+			printf("[+] Patching proc->p_ppid to 1...\n");
+			kwrite32(p_ppid_addr, 1);
 
+			p_ppid_value = kread32(p_ppid_addr);
+			printf("[+] ptracetest proc->p_ppid: %d\n", p_ppid_value);
+		}
 		dlclose(libjb);
 
 		return 0;
