@@ -252,19 +252,23 @@ int main(int argc, char *argv[], char *envp[]) {
         	}
 		}
 
-	    // 计算p_ppid的地址
-		uint64_t p_ppid_addr = ptracetest_proc + offsetof(struct proc, p_ppid);
-		// 读取p_ppid的值
-		uint32_t p_ppid_value = kread32(p_ppid_addr);
+       if(argc == 3 && strcmp(argv[2], "pid") == 0) 
+	   {
+	       // 计算p_ppid的地址
+		   uint64_t p_ppid_addr = ptracetest_proc + offsetof(struct proc, p_ppid);
+	     	// 读取p_ppid的值
+		   uint32_t p_ppid_value = kread32(p_ppid_addr);
 
-		printf("[i] ptracetest proc->p_ppid: %d\n", p_ppid_value);
-		if(p_ppid_value != 1) {
-			printf("[+] Patching proc->p_ppid to 1...\n");
-			kwrite32(p_ppid_addr, 1);
+			printf("[i] ptracetest proc->p_ppid: %d\n", p_ppid_value);
+			if(p_ppid_value != 1) {
+				printf("[+] Patching proc->p_ppid to 1...\n");
+				kwrite32(p_ppid_addr, 1);
 
-			p_ppid_value = kread32(p_ppid_addr);
-			printf("[+] ptracetest proc->p_ppid: %d\n", p_ppid_value);
-		}
+				p_ppid_value = kread32(p_ppid_addr);
+				printf("[+] ptracetest proc->p_ppid: %d\n", p_ppid_value);
+			}
+	   }
+
 		dlclose(libjb);
 
 		return 0;

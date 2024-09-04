@@ -10,6 +10,14 @@ typedef void * lck_spin_t;
 typedef void * os_ref_atomic_t;
 // typedef void * os_ref_atomic_t;
 
+struct ptrace_args {
+    int req;         // 4 bytes
+    void * unknow[4];        //和实际内存的中偏移不符.实际pid 是+8，所以加了unknow填充
+    pid_t pid;       // 4 bytes
+    user_addr_t addr;// 8 bytes (on a 64-bit system)
+    int data;        // 4 bytes
+};
+
 struct proc_ro {
 	struct proc *pr_proc;
 	struct task *pr_task;
