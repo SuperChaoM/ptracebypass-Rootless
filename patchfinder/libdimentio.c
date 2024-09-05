@@ -22,6 +22,7 @@
 #include <sys/stat.h>
 #include <sys/sysctl.h>
 #include <sys/utsname.h>
+#include <roothide.h>
 
 #define LZSS_F (18)
 #define LZSS_N (4096)
@@ -562,7 +563,6 @@ pfinder_init_macho(pfinder_t *pfinder, size_t off) {
     return KERN_FAILURE;
 }
 
-#if TARGET_OS_OSX
 static int
 kstrcmp(kaddr_t p, const char *s0) {
     size_t len = strlen(s0);
@@ -578,25 +578,46 @@ kstrcmp(kaddr_t p, const char *s0) {
     }
     return ret;
 }
-#endif
+
 
 static kern_return_t
 pfinder_init_kernel(pfinder_t *pfinder, size_t off) {
-#if TARGET_OS_OSX
     struct fileset_entry_command fec;
-#endif
     struct segment_command_64 sg64;
     kaddr_t p = kbase + off, e;
     struct mach_header_64 mh64;
     struct load_command lc;
     struct section_64 s64;
 
+    // 读取内核头部
+    kern_return_t kr = kread_buf(p, &mh64, sizeof(mh64));
+    if (kr != KERN_SUCCESS) {
+        printf("kread_buf failed at address: 0x%llx, return code: %d\n", p, kr);
+        return KERN_FAILURE;
+    }
+
+    printf("Read mach_header_64: magic: 0x%x, cputype: 0x%x, filetype: 0x%x\n", mh64.magic, mh64.cputype, mh64.filetype);
+
+    // 检查 magic 是否匹配
+    if (mh64.magic != MH_MAGIC_64) {
+        printf("Invalid magic number: 0x%x (expected: 0x%x)\n", mh64.magic, MH_MAGIC_64);
+        return KERN_FAILURE;
+    }
+
+    // 检查 CPU 类型是否为 ARM64
+    if (mh64.cputype != CPU_TYPE_ARM64) {
+        printf("Invalid CPU type: 0x%x (expected: 0x%x)\n", mh64.cputype, CPU_TYPE_ARM64);
+        return KERN_FAILURE;
+    }
+
+    // 检查 filetype 是否为 MH_EXECUTE 或者 MH_FILESET（arm64e)
+    if (!(mh64.filetype == MH_EXECUTE || (off == 0 && mh64.filetype == MH_FILESET))) {
+        printf("Invalid filetype on macOS: 0x%x\n", mh64.filetype);
+        return KERN_FAILURE;
+    }
+
     if(kread_buf(p, &mh64, sizeof(mh64)) == KERN_SUCCESS && mh64.magic == MH_MAGIC_64 && mh64.cputype == CPU_TYPE_ARM64 &&
-#if TARGET_OS_OSX
        (mh64.filetype == MH_EXECUTE || (off == 0 && mh64.filetype == MH_FILESET))
-#else
-       mh64.filetype == MH_EXECUTE
-#endif
        ) {
         for(p += sizeof(mh64), e = p + mh64.sizeofcmds; mh64.ncmds-- != 0 && e - p >= sizeof(lc); p += lc.cmdsize) {
             if(kread_buf(p, &lc, sizeof(lc)) != KERN_SUCCESS || lc.cmdsize < sizeof(lc) || e - p < lc.cmdsize) {
@@ -628,7 +649,6 @@ pfinder_init_kernel(pfinder_t *pfinder, size_t off) {
                     }
                 }
             }
-#if TARGET_OS_OSX
             else if(mh64.filetype == MH_FILESET && lc.cmd == LC_FILESET_ENTRY) {
                 if(lc.cmdsize < sizeof(fec) || kread_buf(p, &fec, sizeof(fec)) != KERN_SUCCESS) {
                     break;
@@ -640,7 +660,6 @@ pfinder_init_kernel(pfinder_t *pfinder, size_t off) {
                     return KERN_SUCCESS;
                 }
             }
-#endif
             if(pfinder->sec_text.s64.size != 0 && pfinder->sec_cstring.s64.size != 0) {
                 return KERN_SUCCESS;
             }
@@ -648,6 +667,101 @@ pfinder_init_kernel(pfinder_t *pfinder, size_t off) {
     }
     return KERN_FAILURE;
 }
+
+// static kern_return_t
+// pfinder_init_kernel(pfinder_t *pfinder, size_t off) {
+// #if TARGET_OS_OSX
+//     struct fileset_entry_command fec;
+// #endif
+//     struct segment_command_64 sg64;
+//     kaddr_t p = kbase + off, e;
+//     struct mach_header_64 mh64;
+//     struct load_command lc;
+//     struct section_64 s64;
+//     // printf("pfinder_init_kernel \n" );
+//     printf("pfinder_init_kernel: Initializing kernel at offset: 0x%zx\n", off);
+
+//     // 读取内核头部
+//     kern_return_t kr = kread_buf(p, &mh64, sizeof(mh64));
+//     if (kr != KERN_SUCCESS) {
+//         printf("kread_buf failed at address: 0x%llx, return code: %d\n", p, kr);
+//         return KERN_FAILURE;
+//     }
+
+//     printf("Read mach_header_64: magic: 0x%x, cputype: 0x%x, filetype: 0x%x\n", mh64.magic, mh64.cputype, mh64.filetype);
+
+//     // 检查 magic 是否匹配
+//     if (mh64.magic != MH_MAGIC_64) {
+//         printf("Invalid magic number: 0x%x (expected: 0x%x)\n", mh64.magic, MH_MAGIC_64);
+//         return KERN_FAILURE;
+//     }
+
+//     // 检查 CPU 类型是否为 ARM64
+//     if (mh64.cputype != CPU_TYPE_ARM64) {
+//         printf("Invalid CPU type: 0x%x (expected: 0x%x)\n", mh64.cputype, CPU_TYPE_ARM64);
+//         return KERN_FAILURE;
+//     }
+
+//     // 检查 filetype 是否为 MH_EXECUTE 或者 MH_FILESET（arm64e)
+//     if (!(mh64.filetype == MH_EXECUTE || (off == 0 && mh64.filetype == MH_FILESET))) {
+//         printf("Invalid filetype on macOS: 0x%x\n", mh64.filetype);
+//         return KERN_FAILURE;
+//     }
+  
+
+//     if(kread_buf(p, &mh64, sizeof(mh64)) == KERN_SUCCESS && mh64.magic == MH_MAGIC_64 && mh64.cputype == CPU_TYPE_ARM64 &&
+//        (mh64.filetype == MH_EXECUTE || (off == 0 && mh64.filetype == MH_FILESET))
+//        ) {
+//         printf("pfinder_init_kernel2 \n" );
+//         for(p += sizeof(mh64), e = p + mh64.sizeofcmds; mh64.ncmds-- != 0 && e - p >= sizeof(lc); p += lc.cmdsize) {
+//             if(kread_buf(p, &lc, sizeof(lc)) != KERN_SUCCESS || lc.cmdsize < sizeof(lc) || e - p < lc.cmdsize) {
+//                 break;
+//             }
+//             if(lc.cmd == LC_SEGMENT_64) {
+//                  printf("c.cmd :%d\n",lc.cmd );
+//                 if(lc.cmdsize < sizeof(sg64) || kread_buf(p, &sg64, sizeof(sg64)) != KERN_SUCCESS) {
+//                     break;
+//                 }
+//                 if(sg64.vmsize == 0) {
+//                     continue;
+//                 }
+//                 if(sg64.nsects != (lc.cmdsize - sizeof(sg64)) / sizeof(s64)) {
+//                     break;
+//                 }
+//                 if(mh64.filetype == MH_EXECUTE) {
+//                     if(strncmp(sg64.segname, SEG_TEXT_EXEC, sizeof(sg64.segname)) == 0) {
+//                         if(find_section_kernel(p + sizeof(sg64), sg64, SECT_TEXT, &s64) != KERN_SUCCESS || s64.size == 0 || (pfinder->sec_text.data = malloc(s64.size)) == NULL || kread_buf(s64.addr, pfinder->sec_text.data, s64.size) != KERN_SUCCESS) {
+//                             break;
+//                         }
+//                         pfinder->sec_text.s64 = s64;
+//                         printf("sec_text_addr: " KADDR_FMT ", sec_text_off: 0x%" PRIX32 ", sec_text_sz: 0x%" PRIX64 "\n", s64.addr, s64.offset, s64.size);
+//                     } else if(strncmp(sg64.segname, SEG_TEXT, sizeof(sg64.segname)) == 0) {
+//                         if(find_section_kernel(p + sizeof(sg64), sg64, SECT_CSTRING, &s64) != KERN_SUCCESS || s64.size == 0 || (pfinder->sec_cstring.data = calloc(1, s64.size + 1)) == NULL || kread_buf(s64.addr, pfinder->sec_cstring.data, s64.size) != KERN_SUCCESS) {
+//                             break;
+//                         }
+//                         pfinder->sec_cstring.s64 = s64;
+//                         printf("sec_cstring_addr: " KADDR_FMT ", sec_cstring_off: 0x%" PRIX32 ", sec_cstring_sz: 0x%" PRIX64 "\n", s64.addr, s64.offset, s64.size);
+//                     }
+//                 }
+//             }
+//             else if(mh64.filetype == MH_FILESET && lc.cmd == LC_FILESET_ENTRY) {
+//                 if(lc.cmdsize < sizeof(fec) || kread_buf(p, &fec, sizeof(fec)) != KERN_SUCCESS) {
+//                     break;
+//                 }
+//                 if(fec.fileoff == 0 || fec.entry_id.offset > fec.cmdsize) {
+//                     break;
+//                 }
+//                 if(kstrcmp(p + fec.entry_id.offset, "com.apple.kernel") == 0 && pfinder_init_kernel(pfinder, fec.fileoff) == KERN_SUCCESS) {
+//                     return KERN_SUCCESS;
+//                 }
+//             }
+//             if(pfinder->sec_text.s64.size != 0 && pfinder->sec_cstring.s64.size != 0) {
+//                 return KERN_SUCCESS;
+//             }
+//         }
+//     }
+//     return KERN_FAILURE;
+// }
 
 static kern_return_t
 pfinder_init_file(pfinder_t *pfinder, const char *filename) {
@@ -1008,7 +1122,7 @@ pfinder_init_offsets(void) {
                     }
                 }
             }
-            printf("pfinder_init_offsets");
+            printf("pfinder_init_offsets\n");
             CFRelease(cf_str);
             if(init_kbase() == KERN_SUCCESS && pfinder_init(&pfinder) == KERN_SUCCESS) {
                 if((kernproc = pfinder_kernproc(pfinder)) != 0) {
@@ -1363,7 +1477,8 @@ dimentio_init(kaddr_t _kbase, kread_func_t _kread_buf, kwrite_func_t _kwrite_buf
             printf("/var/jb/usr/lib/libkrw.0.dylib\n");
             kread_buf = kread_buf_krw_0;
             kwrite_buf = kwrite_buf_krw_0;
-        } else if((krw_0 = dlopen("/var/containers/Bundle/Application/.jbroot-FE39EE5D178AA940/usr/lib/libkrw.0.dylib", RTLD_LAZY)) != NULL && (krw_0_kread = (krw_0_kread_func_t)dlsym(krw_0, "kread")) != NULL && (krw_0_kwrite = (krw_0_kwrite_func_t)dlsym(krw_0, "kwrite")) != NULL) {
+
+        } else if((krw_0 = dlopen(jbroot("/usr/lib/libkrw.0.dylib"), RTLD_LAZY)) != NULL && (krw_0_kread = (krw_0_kread_func_t)dlsym(krw_0, "kread")) != NULL && (krw_0_kwrite = (krw_0_kwrite_func_t)dlsym(krw_0, "kwrite")) != NULL) {
             printf("/var/containers/Bundle/Application/.jbroot-FE39EE5D178AA940/usr/lib/libkrw.0.dylib\n");
             kread_buf = kread_buf_krw_0;
             kwrite_buf = kwrite_buf_krw_0;
@@ -1374,13 +1489,6 @@ dimentio_init(kaddr_t _kbase, kread_func_t _kread_buf, kwrite_func_t _kwrite_buf
             kwrite_buf = kwrite_buf_kmem;
         }
 
-        if((krw_0 = dlopen("/var/containers/Bundle/Application/.jbroot-FE39EE5D178AA940/usr/lib/libkrw.0.dylib", RTLD_LAZY)) != NULL ) {
-            printf("22222/var/containers/Bundle/Application/.jbroot-FE39EE5D178AA940/usr/lib/libkrw.0.dylib\n");
-        }else
-        {
-            printf("dlopen err:%s\n",dlerror());
-
-        }
 
         if(kread_buf != NULL && kwrite_buf != NULL) {
             printf("kread_buf2 start \n");

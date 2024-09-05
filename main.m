@@ -3,7 +3,7 @@
 #include <Foundation/Foundation.h>
 #include "patchfinder/libdimentio.h"
 // #include "patchfinder/find_kernel_base_under_checkra1n.h"
-
+#include <roothide.h>
 
 #include <sys/proc.h>
 #include <sys/param.h>
@@ -92,6 +92,10 @@ int jbdInitPPLRW(void) {
 uint64_t getProc(pid_t pid) {
     //  https://github.com/apple/darwin-xnu/blob/main/bsd/sys/proc_internal.h#L193
     //  https://github.com/apple/darwin-xnu/blob/main/bsd/sys/queue.h#L470
+	//LIST_ENTRY(proc) p_list;            
+
+	//iOS16
+	//https://github.com/apple-oss-distributions/xnu/tree/rel/xnu-8792    
     
     uint64_t proc2 = kread64(kernproc);
     int iterations = 0;
@@ -127,6 +131,10 @@ uint64_t getProc(pid_t pid) {
 			}
 
 		    proc2 = kread64(proc2 + 0x8/*PROC_P_LIST_LE_PREV_OFF*/);
+
+			// 更新 proc2 的值为下一个进程的地址
+			// 确保访问的是 union 中的 p_list 成员的偏移
+			// proc2 = kread64(proc2 + offsetof(struct proc, p_list.le_prev)); // 假设偏移量未变
 	}
     
     return 0;
@@ -167,7 +175,7 @@ int find_pids(const char *name)
 
 int main(int argc, char *argv[], char *envp[]) {
 	@autoreleasepool {
-		libjb = dlopen("/var/containers/Bundle/Application/.jbroot-FE39EE5D178AA940/basebin/libjailbreak.dylib", RTLD_NOW);
+		libjb = dlopen(jbroot("/basebin/libjailbreak.dylib"), RTLD_NOW);
 		if(libjb != 0) {
 			printf("libjailbreak load\n");
 		}else
@@ -204,7 +212,8 @@ int main(int argc, char *argv[], char *envp[]) {
 
 		// https://github.com/apple/darwin-xnu/blob/main/bsd/kern/mach_process.c#L133
 	
-		uint64_t ptracetest_lflag = ptracetest_proc + 0x268/*lflagoffset*/;
+		// uint64_t ptracetest_lflag = ptracetest_proc + 0x268/*lflagoffset*/;
+		uint64_t ptracetest_lflag = ptracetest_proc + 0x260/*lflagoffset*/;
 		unsigned int lflagvalue = kread32(ptracetest_lflag);
 		printf("[i] ptracetest ptracetest_lflag->addr:  0x%llx\n", ptracetest_lflag);
 		printf("[i] ptracetest proc->p_lflag: 0x%x\n", lflagvalue);

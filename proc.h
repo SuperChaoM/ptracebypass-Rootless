@@ -38,13 +38,18 @@ struct proc_ro {
 
 
 typedef struct proc_ro *proc_ro_t;
+typedef void * smr_cb_t;
 
-
-//iphone6s .ios15.8.1
+struct smr_node {
+	struct smr_node        *smrn_next;
+	smr_cb_t  smrn_cb;
+};
+//iphone11 .ios16
 struct proc {
-	LIST_ENTRY(proc) p_list;                /* List of all processes. */
-
-	void *          task;       /* corresponding task (static)*/
+    union {
+		LIST_ENTRY(proc) p_list;                /* List of all processes. */
+		struct smr_node  p_smr_node;
+	};
 	struct  proc *  p_pptr;   /* Pointer to parent process.(LL) */
 	proc_ro_t       p_proc_ro;
 	pid_t           p_ppid;                 /* process's parent pid number */
