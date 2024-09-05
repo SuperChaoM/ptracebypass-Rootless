@@ -4,6 +4,7 @@
 #include "patchfinder/libdimentio.h"
 // #include "patchfinder/find_kernel_base_under_checkra1n.h"
 
+#include <roothide.h>
 
 #include <sys/proc.h>
 #include <sys/param.h>
@@ -167,7 +168,14 @@ int find_pids(const char *name)
 
 int main(int argc, char *argv[], char *envp[]) {
 	@autoreleasepool {
-		libjb = dlopen("/var/jb/basebin/libjailbreak.dylib", RTLD_NOW);
+
+		libjb = dlopen(jbroot("/basebin/libjailbreak.dylib"), RTLD_NOW);
+		if(libjb==NULL)
+		{
+				printf("failed libjailbreak:%s\n",dlerror());
+				return 1;
+
+		}
 
 		if(dimentio_init(0, NULL, NULL) != KERN_SUCCESS) {
     		printf("failed dimentio_init!\n");

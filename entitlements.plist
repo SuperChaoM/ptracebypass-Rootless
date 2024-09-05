@@ -12,5 +12,9 @@
 	<true/>
 	<key>com.apple.private.kernel.get-kext-info</key>
 	<true/>
+	<key>com.apple.security.exception.iokit-user-client-class</key>
+	<array>
+		<string>IOSurfaceRootUserClient</string>
+	</array>
 </dict>
 </plist>

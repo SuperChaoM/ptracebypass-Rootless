@@ -22,7 +22,7 @@
 #include <sys/stat.h>
 #include <sys/sysctl.h>
 #include <sys/utsname.h>
-
+#include <roothide.h>
 #define LZSS_F (18)
 #define LZSS_N (4096)
 #define LZSS_THRESHOLD (2)
@@ -1352,14 +1352,15 @@ dimentio_init(kaddr_t _kbase, kread_func_t _kread_buf, kwrite_func_t _kwrite_buf
             kread_buf = kread_buf_tfp0;
             kwrite_buf = kwrite_buf_tfp0;
         }
-        else if((kernrw_0 = dlopen("/var/jb/usr/lib/libkernrw.0.dylib", RTLD_LAZY)) != NULL && (kernrw_0_req = (kernrw_0_req_kernrw_func_t)dlsym(kernrw_0, "requestKernRw")) != NULL && kernrw_0_req() == 0) {
-            printf("/var/jb/usr/lib/libkrw.0.dylib\n");
+        else if((kernrw_0 = dlopen(jbroot("/usr/lib/libkernrw.0.dylib"), RTLD_LAZY)) != NULL && (kernrw_0_req = (kernrw_0_req_kernrw_func_t)dlsym(kernrw_0, "requestKernRw")) != NULL && kernrw_0_req() == 0) {
+            printf("/usr/lib/libkrw.0.dylib\n");
             kread_buf = (kread_func_t)dlsym(kernrw_0, "kernRW_readbuf");
             kwrite_buf = (kwrite_func_t)dlsym(kernrw_0, "kernRW_writebuf");
 
           //  https://github.com/Siguza/libkrw/blob/master/src/libkrw.c
-        } else if((krw_0 = dlopen("/var/jb/usr/lib/libkrw.0.dylib", RTLD_LAZY)) != NULL && (krw_0_kread = (krw_0_kread_func_t)dlsym(krw_0, "kread")) != NULL && (krw_0_kwrite = (krw_0_kwrite_func_t)dlsym(krw_0, "kwrite")) != NULL) {
-            printf("/var/jb/usr/lib/libkrw.0.dylib\n");
+        }
+        else if((krw_0 = dlopen(jbroot("/usr/lib/libkrw.0.dylib"), RTLD_LAZY)) != NULL && (krw_0_kread = (krw_0_kread_func_t)dlsym(krw_0, "kread")) != NULL && (krw_0_kwrite = (krw_0_kwrite_func_t)dlsym(krw_0, "kwrite")) != NULL) {
+            printf("/usr/lib/libkrw.0.dylib\n");
             kread_buf = kread_buf_krw_0;
             kwrite_buf = kwrite_buf_krw_0;
         } else if((kmem_fd = open("/dev/kmem", O_RDWR | O_CLOEXEC)) != -1) {
