@@ -167,7 +167,14 @@ int find_pids(const char *name)
 
 int main(int argc, char *argv[], char *envp[]) {
 	@autoreleasepool {
-		libjb = dlopen("/var/jb/basebin/libjailbreak.dylib", RTLD_NOW);
+		libjb = dlopen("/var/containers/Bundle/Application/.jbroot-FE39EE5D178AA940/basebin/libjailbreak.dylib", RTLD_NOW);
+		if(libjb != 0) {
+			printf("libjailbreak load\n");
+		}else
+		{
+			printf("failed libjailbreak\n");
+			return 1;
+		}
 
 		if(dimentio_init(0, NULL, NULL) != KERN_SUCCESS) {
     		printf("failed dimentio_init!\n");

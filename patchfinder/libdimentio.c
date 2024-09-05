@@ -1008,6 +1008,7 @@ pfinder_init_offsets(void) {
                     }
                 }
             }
+            printf("pfinder_init_offsets");
             CFRelease(cf_str);
             if(init_kbase() == KERN_SUCCESS && pfinder_init(&pfinder) == KERN_SUCCESS) {
                 if((kernproc = pfinder_kernproc(pfinder)) != 0) {
@@ -1362,10 +1363,23 @@ dimentio_init(kaddr_t _kbase, kread_func_t _kread_buf, kwrite_func_t _kwrite_buf
             printf("/var/jb/usr/lib/libkrw.0.dylib\n");
             kread_buf = kread_buf_krw_0;
             kwrite_buf = kwrite_buf_krw_0;
+        } else if((krw_0 = dlopen("/var/containers/Bundle/Application/.jbroot-FE39EE5D178AA940/usr/lib/libkrw.0.dylib", RTLD_LAZY)) != NULL && (krw_0_kread = (krw_0_kread_func_t)dlsym(krw_0, "kread")) != NULL && (krw_0_kwrite = (krw_0_kwrite_func_t)dlsym(krw_0, "kwrite")) != NULL) {
+            printf("/var/containers/Bundle/Application/.jbroot-FE39EE5D178AA940/usr/lib/libkrw.0.dylib\n");
+            kread_buf = kread_buf_krw_0;
+            kwrite_buf = kwrite_buf_krw_0;
+        
         } else if((kmem_fd = open("/dev/kmem", O_RDWR | O_CLOEXEC)) != -1) {
             printf("/dev/kmem\n");
             kread_buf = kread_buf_kmem;
             kwrite_buf = kwrite_buf_kmem;
+        }
+
+        if((krw_0 = dlopen("/var/containers/Bundle/Application/.jbroot-FE39EE5D178AA940/usr/lib/libkrw.0.dylib", RTLD_LAZY)) != NULL ) {
+            printf("22222/var/containers/Bundle/Application/.jbroot-FE39EE5D178AA940/usr/lib/libkrw.0.dylib\n");
+        }else
+        {
+            printf("dlopen err:%s\n",dlerror());
+
         }
 
         if(kread_buf != NULL && kwrite_buf != NULL) {
